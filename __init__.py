@@ -35,7 +35,10 @@ class Plugin(PluginBase):
         self.auto_self_update = self.config.get('auto_self_update', False)
 
     def on_load(self):
-        # 启动后台检查任务
+        l.info(f"{self.metadata.name} loaded.")
+
+    async def on_startup(self):
+        l.info(f"{self.metadata.name} starting background tasks...")
         asyncio.create_task(self._startup_routine())
 
     async def _startup_routine(self):
@@ -49,6 +52,9 @@ class Plugin(PluginBase):
 
     async def _process_auto_install(self):
         """读取 auto_install.json 并安装缺失插件"""
+
+        l.info("[AutoInstall] Processing auto_install.json...")
+
         if not AUTO_INSTALL_FILE.exists():
             # 创建默认空文件
             with open(AUTO_INSTALL_FILE, 'w') as f:
@@ -58,13 +64,16 @@ class Plugin(PluginBase):
         try:
             with open(AUTO_INSTALL_FILE, 'r') as f:
                 required_plugins = json.load(f)
+                l.debug(f"[AutoInstall] Required plugins: {required_plugins}")
             
             if not isinstance(required_plugins, list):
                 l.warning(f"Invalid format in {AUTO_INSTALL_FILE}, expected a list.")
                 return
 
             plugin_dir = self._get_plugins_dir()
+
             for plugin_id in required_plugins:
+                l.info(f"[AutoInstall] Checking plugin '{plugin_id}'...")
                 if not (plugin_dir / plugin_id).exists():
                     l.info(f"[AutoInstall] Plugin '{plugin_id}' is missing. Installing...")
                     # 在线程中运行安装逻辑，避免阻塞事件循环
@@ -379,3 +388,4 @@ class Plugin(PluginBase):
             except Exception as e:
                 l.error(f"Install error: {e}")
                 return False
+
